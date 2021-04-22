@@ -16,7 +16,12 @@ using std::vector;
 System::System() {
 	os_ = LinuxParser::OperatingSystem();
   	kernal_ = LinuxParser::Kernel();
-  	
+    auto pids = LinuxParser::Pids();
+    std::vector<Process> vec;
+  	for (auto iter = pids.begin(); iter != pids.end(); ++iter) {      	
+      	vec.push_back(Process(*iter));
+    }
+  processes_ = vec;
 }
 // TODO: Return the system's CPU
 Processor& System::Cpu() { return cpu_; }

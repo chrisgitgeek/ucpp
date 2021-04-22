@@ -126,6 +126,35 @@ float LinuxParser::CpuUtilization() {
   return percent; 
 }
 
+
+float LinuxParser::CpuUtilizationPerPid(int pid) { 
+  vector<string> res;
+  string line;
+  string key;
+  int a,b,c,idle, rest;
+  std::ifstream stream(kProcDirectory+kStatFilename);
+  if(stream.is_open()){
+    std::getline(stream, line);
+    std::replace(line.begin(), line.end(), ':', ' ');
+    std::istringstream linestream(line);
+    	
+    for(int i =0;i <22; i++){
+      if(i == 13)
+    	linestream>> a;
+      if(i == 14)
+        linestream>> b;
+      if(i == 15)
+        linestream>> c;
+      if(i == 16)
+        linestream>> idle;
+      if(i == 21)
+        linestream>> rest;
+    }
+  }  
+  float percent = (a+b + c) / (a+b +c + idle) *1.0;
+  return percent; 
+}
+
 // TODO: Read and return the total number of processes
 int LinuxParser::TotalProcesses() { 
   string line;
@@ -179,7 +208,24 @@ string LinuxParser::Command(int pid) {
 
 // TODO: Read and return the memory used by a process
 // REMOVE: [[maybe_unused]] once you define the function
-string LinuxParser::Ram(int pid[[maybe_unused]]) { return string(); }
+string LinuxParser::Ram(int pid) { 
+  
+  string line;
+  string key, value;
+  std::ifstream stream(kProcDirectory+to_string(pid)+kStatusFilename);
+  if(stream.is_open()){
+    while(std::getline(stream, line)) {
+    	std::replace(line.begin(), line.end(), ':', ' ');
+    	std::istringstream linestream(line);
+    	linestream>> key >> value;
+        if(key == "vmsize") {
+        	break;
+        }
+    }
+  }
+  
+  return value;
+   }
 
 // TODO: Read and return the user ID associated with a process
 // REMOVE: [[maybe_unused]] once you define the function
