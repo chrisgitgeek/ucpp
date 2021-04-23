@@ -97,62 +97,91 @@ long LinuxParser::UpTime() {
 }
 
 // TODO: Read and return the number of jiffies for the system
-long LinuxParser::Jiffies() { return 0; }
+long LinuxParser::Jiffies() { 
+  
+  return sysconf(_SC_CLK_TCK) * UpTime(); 
+}
 
 // TODO: Read and return the number of active jiffies for a PID
 // REMOVE: [[maybe_unused]] once you define the function
-long LinuxParser::ActiveJiffies(int pid[[maybe_unused]]) { return 0; }
+long LinuxParser::ActiveJiffies(int pid) { 
+  vector<long> stats = PidStat(pid);
+  long res = 0;
+  for(int i =0;i<4;i++){
+  	res += stats[i];
+  }
+  return res; 
+}
 
-// TODO: Read and return the number of active jiffies for the system
-long LinuxParser::ActiveJiffies() { return 0; }
-
-// TODO: Read and return the number of idle jiffies for the system
-long LinuxParser::IdleJiffies() { return 0; }
-
-// TODO: Read and return CPU utilization
-float LinuxParser::CpuUtilization() { 
-  vector<string> res;
+std::vector<long> LinuxParser::extractSystemStat(){
   string line;
-  string key;
-  int a,b,c,idle, rest;
+  long  value;
+  string cpu;
+  std::vector<long> res;
   std::ifstream stream(kProcDirectory+kStatFilename);
   if(stream.is_open()){
     std::getline(stream,line);
-    std::replace(line.begin(), line.end(), ':', ' ');
     std::istringstream linestream(line);
-    linestream>> key >> a>>b>>c>>idle>>rest;    
+    linestream >> cpu;
+    while (linestream >> value) {
+        res.push_back(value); 
+      }
    }
-  float percent = (a+b + c) / (a+b +c + idle) *1.0;
-  return percent; 
+ 	return res;
+}
+
+// TODO: Read and return the number of active jiffies for the system
+long LinuxParser::ActiveJiffies() {
+  auto systemStats = extractSystemStat();
+  long res= 0;
+  for(auto iter = systemStats.begin(); iter!=systemStats.end();iter++){
+  	res += *iter;
+  }
+  return res;
+}
+
+// TODO: Read and return the number of idle jiffies for the system
+long LinuxParser::IdleJiffies() { 
+  auto systemStats = extractSystemStat();   
+  return systemStats[3] + systemStats[4]; 
+}
+
+// TODO: Read and return CPU utilization
+float LinuxParser::CpuUtilization() { 
+  vector<long> stats = LinuxParser::extractSystemStat();
+  auto preIdle = stats[3] +stats[4];
+  auto preNonIdle = stats[0] +stats[1] +stats[2] +stats[5] +stats[6] +stats[7];
+  sleep(1);
+  stats = extractSystemStat();
+  auto idle = stats[3] +stats[4];
+  auto nonIdle = stats[0] +stats[1] +stats[2] +stats[5] +stats[6] +stats[7];
+  auto preTotal = preIdle +preNonIdle;
+  auto total = idle + nonIdle;
+  auto totald = total - preTotal;
+  auto idled = idle - preIdle;
+  return (totald - idled)*1.0/totald;
 }
 
 
-float LinuxParser::CpuUtilizationPerPid(int pid) { 
-  vector<string> res;
+std::vector<long> LinuxParser::PidStat(int pid) { 
+  std::vector<long> res;
   string line;
   string key;
-  int a,b,c,idle, rest;
-  std::ifstream stream(kProcDirectory+kStatFilename);
+  long value;
+  std::ifstream stream(kProcDirectory+to_string(pid)+kStatFilename);
   if(stream.is_open()){
     std::getline(stream, line);
     std::replace(line.begin(), line.end(), ':', ' ');
     std::istringstream linestream(line);
     	
     for(int i =0;i <22; i++){
-      if(i == 13)
-    	linestream>> a;
-      if(i == 14)
-        linestream>> b;
-      if(i == 15)
-        linestream>> c;
-      if(i == 16)
-        linestream>> idle;
-      if(i == 21)
-        linestream>> rest;
+      if(i == 13 ||i == 14||i == 15||i == 16||i == 21){
+      	linestream>> value;
+      	res.push_back(value);
+      }
     }
   }  
-  float percent = (a+b + c) / (a+b +c + idle) *1.0;
-  return percent; 
+  return res; 
 }
 
 // TODO: Read and return the total number of processes
@@ -187,6 +216,9 @@ int LinuxParser::RunningProcesses() {
     	std::replace(line.begin(), line.end(), ':', ' ');
     	std::istringstream linestream(line);
     	linestream>> key >> value;
+      if(key == "procs_running"){
+      	break;
+      }
     }
   }
   return value;
@@ -218,7 +250,7 @@ string LinuxParser::Ram(int pid) {
     	std::replace(line.begin(), line.end(), ':', ' ');
     	std::istringstream linestream(line);
     	linestream>> key >> value;
-        if(key == "vmsize") {
+        if(key == "VmSize") {
         	break;
         }
     }
@@ -286,3 +318,5 @@ long LinuxParser::UpTime(int pid) {
   
   return UpTime() - stol(value) / sysconf(_SC_CLK_TCK);
    }
+
+// long LinuxParser::CalculateCPUUtilizationFromVector() {}

@@ -22,7 +22,14 @@ Process::Process(int pid){
 int Process::Pid() { return pid_; }
 
 // TODO: Return this process's CPU utilization
-float Process::CpuUtilization() { return LinuxParser::CpuUtilizationPerPid(pid_); }
+float Process::CpuUtilization() { 
+  auto stats = LinuxParser::PidStat(pid_);
+  auto total_time = stats[0] + stats[1]+stats[2]+stats[3];
+  auto uptime = LinuxParser::UpTime();
+  auto hertz = sysconf(_SC_CLK_TCK);
+  auto seconds = uptime - (stats[4] / hertz);
+
+  return 100 * ((total_time / hertz) / seconds); }
 
 // TODO: Return the command that generated this process
 string Process::Command() { return command_; }
