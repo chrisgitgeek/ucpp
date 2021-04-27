@@ -250,8 +250,7 @@ string LinuxParser::Ram(int pid) {
         }
     }
   }
-  
-  return value;
+  return std::to_string(stoi(value)/1024);
    }
 
 
