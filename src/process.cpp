@@ -20,7 +20,7 @@ Process::Process(int pid){
 }
 int Process::Pid() { return pid_; }
 
-float Process::CpuUtilization() { 
+float Process::CpuUtilization() const{ 
   auto stats = LinuxParser::PidStat(pid_);
   auto total_time = stats[0] + stats[1]+stats[2]+stats[3];
   auto uptime = LinuxParser::UpTime();
@@ -38,4 +38,4 @@ string Process::User() { return user_; }
 long int Process::UpTime() { return LinuxParser::UpTime(pid_); }
 
 
-bool Process::operator<(Process const& a) const { return true; }
+bool Process::operator<(Process const& a) const { return this->CpuUtilization() > a.CpuUtilization(); }
